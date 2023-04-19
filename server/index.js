@@ -12,10 +12,10 @@ const PORT = dev.app.serverPort;
 
 app.use(morgan("dev"));
 app.use(bodyParser.json());
-app.use("/users", userRouter);
+app.use("/api/users", userRouter);
 
 app.get("/", (req, res) => {
-  res.json({ message: "testing route" });
+  res.json({ message: "testing route working" });
 });
 
 app.listen(PORT, () => {
