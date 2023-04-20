@@ -31,9 +31,6 @@ const userSchema = new mongoose.Schema({
         "Password need to contain: minimum 10 characters, 1 lowercase character, 1 uppercase character, 1 symbol and 1 number",
     },
   },
-  result: {
-    type: Number,
-  },
   phone: {
     type: String,
     require: [true, "entering phone number is required"],
@@ -47,7 +44,7 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  photo: {
+  image: {
     data: Buffer,
     contentType: String,
   },

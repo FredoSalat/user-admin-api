@@ -1,5 +1,10 @@
+const jwt = require("jsonwebtoken");
+const fs = require("fs");
+
 const securePassword = require("../helpers/bcryptPassword");
 const User = require("../models/userModel");
+const sendEmail = require("../helpers/email");
+const dev = require("../config");
 
 const registerUser = async (req, res) => {
   try {
@@ -28,12 +33,97 @@ const registerUser = async (req, res) => {
 
     const hashedPassword = await securePassword(password);
 
-    const newUser = new User({ name, email, phone, password });
-    await newUser.save();
-    return res.status(201).json({ message: "User was created" });
+    const token = jwt.sign(
+      { name, email, hashedPassword, phone, image },
+      dev.app.jwtSecretKey,
+      { expiresIn: "15m" }
+    );
+
+    const emailData = {
+      email,
+      subject: "User verification",
+      html: `<h1>Hi ${name}!</h1> 
+      <h3>Please click the following button to activate your account <br>
+      <a href="${dev.app.clientUrl}/app/users/activate/${token}
+      "><button style= "background-color:#008CBA; 
+      border: none;
+      color: white;
+      padding: 15px 32px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 4px 2px;
+      cursor: pointer;"type="button">Click Me!</button></a>
+      </h3>`,
+    };
+
+    sendEmail(emailData);
+
+    return res.status(201).json({
+      message: `Verification link has been sent to ${email}`,
+      token,
+    });
   } catch (error) {
     return res.status(500).json(error.message);
   }
 };
 
-module.exports = registerUser;
+const verifyUser = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(500).json({ message: "no token to be found" });
+    }
+    jwt.verify(token, dev.app.jwtSecretKey, async (err, decoded) => {
+      if (err) {
+        return res.status(401).json({ message: "Token has expired" });
+      }
+      const { name, email, hashedPassword, phone, image } = decoded;
+      const user = new User({
+        name,
+        email,
+        password: hashedPassword,
+        phone,
+        is_verified: true,
+      });
+
+      if (image) {
+        user.image.data = fs.readFileSync(image.path);
+        user.image.contentType = image.type;
+      }
+      const newUser = await user.save();
+      if (!newUser) {
+        return res.status(404).json({ message: "User could not be saved" });
+      }
+      return res.status(200).json({
+        message: "User email has been verified and user has been added",
+      });
+    });
+  } catch (error) {
+    return res.status(500).json(error.message);
+  }
+};
+
+const login = () => {
+  try {
+    return res.status(200).json({
+      message: "User email has been logged in",
+    });
+  } catch (error) {
+    return res.status(500).json(error.message);
+  }
+};
+
+const logout = () => {
+  try {
+    return res.status(200).json({
+      message: "User email has been logged out",
+    });
+  } catch (error) {
+    return res.status(500).json(error.message);
+  }
+};
+
+module.exports = { registerUser, verifyUser, login, logout };
