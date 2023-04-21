@@ -1,10 +1,15 @@
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
+const validator = require("validator");
 
-const securePassword = require("../helpers/bcryptPassword");
+const {
+  securePassword,
+  comparePassword,
+} = require("../helpers/bcryptPassword");
 const User = require("../models/userModel");
 const sendEmail = require("../helpers/email");
 const dev = require("../config");
+const { match } = require("assert");
 
 const registerUser = async (req, res) => {
   try {
@@ -28,6 +33,17 @@ const registerUser = async (req, res) => {
     if (isAlreadyRegistered) {
       return res.status(400).json({
         message: "this email has already been used to register another user",
+      });
+    }
+
+    const isValidPassword = validator.isStrongPassword(password, {
+      minLength: 10,
+    });
+
+    if (!isValidPassword) {
+      return res.status(400).json({
+        message:
+          "Password need to contain: minimum 10 characters, 1 lowercase character, 1 uppercase character, 1 symbol and 1 number",
       });
     }
 
@@ -106,24 +122,43 @@ const verifyUser = async (req, res) => {
   }
 };
 
-const login = () => {
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.fields;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const matchingPassword = await comparePassword(password, user.password);
+
+    if (!matchingPassword) {
+      return res.status(404).json({ message: "Wrong password" });
+    }
+    return res.status(200).json({ message: "User was successfully logged in" });
+  } catch (error) {
+    return res.status(500).json(error.message);
+  }
+};
+
+const logout = (req, res) => {
   try {
     return res.status(200).json({
-      message: "User email has been logged in",
+      message: "User has been logged out",
     });
   } catch (error) {
     return res.status(500).json(error.message);
   }
 };
 
-const logout = () => {
+const profile = (req, res) => {
   try {
     return res.status(200).json({
-      message: "User email has been logged out",
+      message: "User profile",
     });
   } catch (error) {
     return res.status(500).json(error.message);
   }
 };
 
-module.exports = { registerUser, verifyUser, login, logout };
+module.exports = { registerUser, verifyUser, login, logout, profile };

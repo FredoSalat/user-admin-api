@@ -9,4 +9,12 @@ const securePassword = async (password) => {
   }
 };
 
-module.exports = securePassword;
+const comparePassword = (plainPassword, hashedPassword) => {
+  try {
+    return bcrypt.compare(plainPassword, hashedPassword);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+module.exports = { securePassword, comparePassword };
