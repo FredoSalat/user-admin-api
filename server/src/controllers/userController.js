@@ -9,7 +9,6 @@ const {
 const User = require("../models/userModel");
 const sendEmail = require("../helpers/email");
 const dev = require("../config");
-const { match } = require("assert");
 
 const registerUser = async (req, res) => {
   try {
@@ -133,9 +132,18 @@ const login = async (req, res) => {
     const matchingPassword = await comparePassword(password, user.password);
 
     if (!matchingPassword) {
-      return res.status(404).json({ message: "Wrong password" });
+      return res.status(404).json({
+        message: "Wrong password",
+      });
     }
-    return res.status(200).json({ message: "User was successfully logged in" });
+    req.session.userId = user._id;
+
+    console.log(req.session);
+
+    return res.status(200).json({
+      user: { name: user.name, email: user.email },
+      message: "User was successfully logged in",
+    });
   } catch (error) {
     return res.status(500).json(error.message);
   }
@@ -143,6 +151,8 @@ const login = async (req, res) => {
 
 const logout = (req, res) => {
   try {
+    req.session.destroy();
+    res.clearCookie("user_session");
     return res.status(200).json({
       message: "User has been logged out",
     });

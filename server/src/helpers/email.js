@@ -22,7 +22,6 @@ const sendEmail = async (email) => {
         console.log(error);
       } else {
         console.log("Email sent: " + info.response);
-        // do something useful
       }
     });
   } catch (error) {
