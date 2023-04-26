@@ -7,10 +7,14 @@ const {
   verifyUser,
   login,
   logout,
-  profile,
+  userProfile,
+  deleteUser,
+  updateUser,
+  updatePassword,
+  resetPassword,
 } = require("../controllers/userController");
 const dev = require("../config");
-const isLoggedIn = require("../middlewares/auth");
+const { isLoggedIn, isLoggedOut } = require("../middlewares/auth");
 
 const router = express.Router();
 
@@ -20,14 +24,23 @@ router.use(
     secret: dev.app.sessionSecretKey,
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false, maxAge: 600000 }, // maxAge 10 min
+    cookie: { secure: false, maxAge: 100 * 6000 },
   })
 );
 
 router.post("/register", formidableMiddleware(), registerUser);
 router.post("/verify-user/", verifyUser);
-router.post("/login", formidableMiddleware(), login);
-router.get("/logout", logout);
-router.get("/profile", isLoggedIn, profile);
+router.post("/login", formidableMiddleware(), isLoggedOut, login);
+router.get("/logout", isLoggedIn, logout);
+router.get("/profile", isLoggedIn, userProfile);
+router.delete("/", isLoggedIn, deleteUser);
+router.put("/", isLoggedIn, formidableMiddleware(), updateUser);
+router.post(
+  "/update-password",
+  isLoggedIn,
+  formidableMiddleware(),
+  updatePassword
+);
+router.post("/reset-password/", isLoggedIn, resetPassword);
 
 module.exports = router;
