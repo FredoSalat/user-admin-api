@@ -40,13 +40,13 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  is_verified: {
-    type: Boolean,
-    default: false,
-  },
-  image: {
+  /*  image: {
     data: Buffer,
     contentType: String,
+  }, */
+  image: {
+    type: String,
+    default: "/public/images/users/default-profile.jpg",
   },
 });
 

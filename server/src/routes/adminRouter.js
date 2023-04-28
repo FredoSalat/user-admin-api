@@ -22,7 +22,13 @@ adminRouter.use(
   })
 );
 
-adminRouter.post("/login", formidableMiddleware(), isLoggedOut, loginAdmin);
+adminRouter.post(
+  "/login",
+  formidableMiddleware(),
+  isLoggedOut,
+  isAdmin,
+  loginAdmin
+);
 adminRouter.get("/logout", isLoggedIn, logoutAdmin);
 adminRouter.get("/dashboard", isLoggedIn, isAdmin, getAllUsers);
 

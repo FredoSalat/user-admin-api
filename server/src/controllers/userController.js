@@ -9,6 +9,7 @@ const {
 const User = require("../models/userModel");
 const sendEmail = require("../helpers/email");
 const dev = require("../config");
+const sendResponse = require("../helpers/responseHandler");
 
 const registerUser = async (req, res) => {
   try {
@@ -16,23 +17,27 @@ const registerUser = async (req, res) => {
     const { image } = req.files;
 
     if (!name || !email || !phone || !password) {
-      return res
-        .status(404)
-        .json({ message: "name, email phone or password is missing" });
+      sendResponse(res, 404, false, "name, email phone or password is missing");
     }
 
     if (image && image.size > 1500000) {
-      return res.status(400).json({
-        message: "Image size is too big. It can't be larger than 1.5 Mb",
-      });
+      sendResponse(
+        res,
+        400,
+        false,
+        "Image size is too big. It can't be larger than 1.5 Mb"
+      );
     }
 
     const isAlreadyRegistered = await User.findOne({ email });
 
     if (isAlreadyRegistered) {
-      return res.status(400).json({
-        message: "this email has already been used to register another user",
-      });
+      sendResponse(
+        res,
+        400,
+        false,
+        "this email has already been used to register another user"
+      );
     }
 
     const isValidPassword = validator.isStrongPassword(password, {
@@ -40,10 +45,12 @@ const registerUser = async (req, res) => {
     });
 
     if (!isValidPassword) {
-      return res.status(400).json({
-        message:
-          "Password need to contain: minimum 10 characters, 1 lowercase character, 1 uppercase character, 1 symbol and 1 number",
-      });
+      sendResponse(
+        res,
+        400,
+        false,
+        "Password need to contain: minimum 10 characters, 1 lowercase character, 1 uppercase character, 1 symbol and 1 number"
+      );
     }
 
     const hashedPassword = await securePassword(password);
@@ -75,12 +82,15 @@ const registerUser = async (req, res) => {
 
     sendEmail(emailData);
 
-    return res.status(201).json({
-      message: `Verification link has been sent to ${email}`,
-      token,
-    });
+    sendResponse(
+      res,
+      201,
+      true,
+      `Verification link has been sent to ${email}`,
+      token
+    );
   } catch (error) {
-    return res.status(500).json(error.message);
+    sendResponse(res, 500, false, `Server error: ${error.message}`);
   }
 };
 
@@ -89,11 +99,11 @@ const verifyUser = async (req, res) => {
     const { token } = req.body;
 
     if (!token) {
-      return res.status(500).json({ message: "no token to be found" });
+      sendResponse(res, 500, false, "no token to be found");
     }
     jwt.verify(token, dev.app.jwtSecretKey, async (err, decoded) => {
       if (err) {
-        return res.status(401).json({ message: "Token has expired" });
+        sendResponse(res, 401, false, "Token has expired");
       }
       const { name, email, hashedPassword, phone, image } = decoded;
       const user = new User({
@@ -101,7 +111,6 @@ const verifyUser = async (req, res) => {
         email,
         password: hashedPassword,
         phone,
-        is_verified: true,
       });
 
       if (image) {
@@ -110,14 +119,18 @@ const verifyUser = async (req, res) => {
       }
       const newUser = await user.save();
       if (!newUser) {
-        return res.status(404).json({ message: "User could not be saved" });
+        sendResponse(res, 404, false, "User could not be saved");
       }
-      return res.status(200).json({
-        message: "User email has been verified and user has been added",
-      });
+
+      sendResponse(
+        res,
+        200,
+        true,
+        "User email has been verified and user has been added"
+      );
     });
   } catch (error) {
-    return res.status(500).json(error.message);
+    sendResponse(res, 500, false, `Server error: ${error.message}`);
   }
 };
 
@@ -126,24 +139,21 @@ const loginUser = async (req, res) => {
     const { email, password } = req.fields;
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      sendResponse(res, 404, false, "User not found");
     }
 
     const matchingPassword = await comparePassword(password, user.password);
 
     if (!matchingPassword) {
-      return res.status(404).json({
-        message: "Wrong password",
-      });
+      sendResponse(res, 404, false, "Wrong password");
     }
     req.session.userId = user._id;
 
-    return res.status(200).json({
+    sendResponse(res, 200, true, "User was successfully logged in", {
       user: { name: user.name, email: user.email },
-      message: "User was successfully logged in",
     });
   } catch (error) {
-    return res.status(500).json(error.message);
+    sendResponse(res, 500, false, `Server error: ${error.message}`);
   }
 };
 
@@ -151,11 +161,9 @@ const logoutUser = (req, res) => {
   try {
     req.session.destroy();
     res.clearCookie("user_session");
-    return res.status(200).json({
-      message: "User has been logged out",
-    });
+    sendResponse(res, 200, true, "User has been logged out");
   } catch (error) {
-    return res.status(500).json(error.message);
+    sendResponse(res, 500, false, `Server error: ${error.message}`);
   }
 };
 
@@ -165,12 +173,11 @@ const userProfile = async (req, res) => {
       password: 0,
       image: 0,
     });
-    return res.status(200).json({
-      message: "User profile",
+    sendResponse(res, 200, true, "User profile", {
       user: userData,
     });
   } catch (error) {
-    return res.status(500).json(error.message);
+    sendResponse(res, 500, false, `Server error: ${error.message}`);
   }
 };
 
@@ -179,14 +186,12 @@ const deleteUser = async (req, res) => {
     const userToDelete = await User.findByIdAndDelete(req.session.userId);
 
     if (!userToDelete) {
-      return res.status(404).json({ message: "User to be deleted not found" });
+      sendResponse(res, 404, false, "User to be deleted not found");
     }
 
-    return res.status(200).json({
-      message: "Deleted user",
-    });
+    sendResponse(res, 200, true, "Deleted user");
   } catch (error) {
-    return res.status(500).json(error.message);
+    sendResponse(res, 500, false, `Server error: ${error.message}`);
   }
 };
 
@@ -201,7 +206,7 @@ const updateUser = async (req, res) => {
     });
 
     if (!userToUpdate) {
-      return res.status(404).json({ message: "User to be updated not found" });
+      sendResponse(res, 404, false, "User to be updated not found");
     }
 
     if (image) {
@@ -211,11 +216,9 @@ const updateUser = async (req, res) => {
 
     await userToUpdate.save();
 
-    return res.status(200).json({
-      message: "User was updated",
-    });
+    sendResponse(res, 200, true, "User was updated");
   } catch (error) {
-    return res.status(500).json(error.message);
+    sendResponse(res, 500, false, `Server error: ${error.message}`);
   }
 };
 
@@ -224,13 +227,13 @@ const updatePassword = async (req, res) => {
     const { email, password } = req.fields;
 
     if (!email || !password) {
-      return res.status(404).json({ message: "Email or password is missing" });
+      sendResponse(res, 404, false, "Email or password is missing");
     }
 
     const user = User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({ message: "User does not exist" });
+      sendResponse(res, 404, false, "User does not exist");
     }
 
     const isValidPassword = validator.isStrongPassword(password, {
@@ -238,10 +241,12 @@ const updatePassword = async (req, res) => {
     });
 
     if (!isValidPassword) {
-      return res.status(400).json({
-        message:
-          "Password need to contain: minimum 10 characters, 1 lowercase character, 1 uppercase character, 1 symbol and 1 number",
-      });
+      sendResponse(
+        res,
+        400,
+        false,
+        "Password need to contain: minimum 10 characters, 1 lowercase character, 1 uppercase character, 1 symbol and 1 number"
+      );
     }
 
     const hashedPassword = await securePassword(password);
@@ -271,12 +276,15 @@ const updatePassword = async (req, res) => {
 
     sendEmail(emailData);
 
-    return res.status(201).json({
-      message: `Restoring password link has been sent to ${email}`,
-      token,
-    });
+    sendResponse(
+      res,
+      201,
+      true,
+      `Restoring password link has been sent to ${email}`,
+      token
+    );
   } catch (error) {
-    return res.status(500).json(error.message);
+    sendResponse(res, 500, false, `Server error: ${error.message}`);
   }
 };
 
@@ -285,11 +293,11 @@ const resetPassword = async (req, res) => {
     const { token } = req.body;
 
     if (!token) {
-      return res.status(500).json({ message: "no token to be found" });
+      sendResponse(res, 500, false, "No token to be found");
     }
     jwt.verify(token, dev.app.jwtSecretKey, async (err, decoded) => {
       if (err) {
-        return res.status(401).json({ message: "Token has expired" });
+        sendResponse(res, 401, false, "Token has expired");
       }
       const { email, hashedPassword } = decoded;
 
@@ -303,16 +311,12 @@ const resetPassword = async (req, res) => {
       );
 
       if (!updateData) {
-        return res
-          .status(404)
-          .json({ message: "New password could not be saved" });
+        sendResponse(res, 404, false, "New password could not be saved");
       }
-      return res.status(200).json({
-        message: "Password has been updated",
-      });
+      sendResponse(res, 200, true, "Password has been updated");
     });
   } catch (error) {
-    return res.status(500).json(error.message);
+    sendResponse(res, 500, false, `Server error: ${error.message}`);
   }
 };
 
