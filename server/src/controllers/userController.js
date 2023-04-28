@@ -121,7 +121,7 @@ const verifyUser = async (req, res) => {
   }
 };
 
-const login = async (req, res) => {
+const loginUser = async (req, res) => {
   try {
     const { email, password } = req.fields;
     const user = await User.findOne({ email });
@@ -147,7 +147,7 @@ const login = async (req, res) => {
   }
 };
 
-const logout = (req, res) => {
+const logoutUser = (req, res) => {
   try {
     req.session.destroy();
     res.clearCookie("user_session");
@@ -223,8 +223,6 @@ const updatePassword = async (req, res) => {
   try {
     const { email, password } = req.fields;
 
-    console.log(email, password);
-
     if (!email || !password) {
       return res.status(404).json({ message: "Email or password is missing" });
     }
@@ -295,8 +293,8 @@ const resetPassword = async (req, res) => {
       }
       const { email, hashedPassword } = decoded;
 
-      const user = User.updateOne(
-        { email },
+      const updateData = await User.updateOne(
+        { email: email },
         {
           $set: {
             password: hashedPassword,
@@ -304,7 +302,7 @@ const resetPassword = async (req, res) => {
         }
       );
 
-      if (!user) {
+      if (!updateData) {
         return res
           .status(404)
           .json({ message: "New password could not be saved" });
@@ -321,8 +319,8 @@ const resetPassword = async (req, res) => {
 module.exports = {
   registerUser,
   verifyUser,
-  login,
-  logout,
+  loginUser,
+  logoutUser,
   userProfile,
   deleteUser,
   updateUser,

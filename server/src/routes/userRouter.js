@@ -5,20 +5,20 @@ const session = require("express-session");
 const {
   registerUser,
   verifyUser,
-  login,
-  logout,
   userProfile,
   deleteUser,
   updateUser,
   updatePassword,
   resetPassword,
+  logoutUser,
+  loginUser,
 } = require("../controllers/userController");
 const dev = require("../config");
 const { isLoggedIn, isLoggedOut } = require("../middlewares/auth");
 
-const router = express.Router();
+const userRouter = express.Router();
 
-router.use(
+userRouter.use(
   session({
     name: "user_session",
     secret: dev.app.sessionSecretKey,
@@ -28,19 +28,21 @@ router.use(
   })
 );
 
-router.post("/register", formidableMiddleware(), registerUser);
-router.post("/verify-user/", verifyUser);
-router.post("/login", formidableMiddleware(), isLoggedOut, login);
-router.get("/logout", isLoggedIn, logout);
-router.get("/profile", isLoggedIn, userProfile);
-router.delete("/", isLoggedIn, deleteUser);
-router.put("/", isLoggedIn, formidableMiddleware(), updateUser);
-router.post(
+userRouter.post("/register", formidableMiddleware(), registerUser);
+userRouter.post("/verify-user/", verifyUser);
+userRouter.post("/login", formidableMiddleware(), isLoggedOut, loginUser);
+userRouter.get("/logout", isLoggedIn, logoutUser);
+userRouter.get("/profile", isLoggedIn, userProfile);
+userRouter
+  .route("/")
+  .delete(isLoggedIn, deleteUser)
+  .put(isLoggedIn, formidableMiddleware(), updateUser);
+userRouter.post(
   "/update-password",
-  isLoggedIn,
+  isLoggedOut,
   formidableMiddleware(),
   updatePassword
 );
-router.post("/reset-password/", isLoggedIn, resetPassword);
+userRouter.post("/reset-password/", isLoggedOut, resetPassword);
 
-module.exports = router;
+module.exports = userRouter;
